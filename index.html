@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seed Generator</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #030405;
+    overflow: hidden;
+    font-family: "Courier New", Courier, monospace;
+  }
+  canvas { display: block; }
+
+  #intro {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #030405;
+    color: #cdd6d8;
+    text-align: center;
+    cursor: pointer;
+    transition: opacity 0.8s ease;
+  }
+  #intro.hidden { opacity: 0; pointer-events: none; }
+  #intro h1 {
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin: 0 0 22px 0;
+    color: #8fa3a8;
+  }
+  #intro p {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: #5c6a6d;
+    margin: 6px 0;
+  }
+  #intro .enter {
+    margin-top: 26px;
+    border: 1px solid #445052;
+    padding: 14px 40px;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #cdd6d8;
+  }
+
+  #hud {
+    position: fixed;
+    bottom: 18px;
+    left: 18px;
+    z-index: 10;
+    color: #5c6a6d;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  #hud.visible { opacity: 0.6; }
+
+  #crosshair {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    margin: -2px 0 0 -2px;
+    border-radius: 50%;
+    background: rgba(205, 214, 216, 0.35);
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  #crosshair.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="intro">
+  <h1>Seed Generator</h1>
+  <p>a path over water, two films hover ahead</p>
+  <p>WASD or arrow keys to walk &nbsp;·&nbsp; mouse to look &nbsp;·&nbsp; Esc to release</p>
+  <div class="enter">click to enter</div>
+</div>
+
+<div id="hud">walking — esc to release the view</div>
+<div id="crosshair"></div>
+
+<!-- Hidden source video elements. Their frames are streamed onto the two
+     hovering screens as textures. Replace the src files in /videos/ with
+     your own exports; filenames below are the only thing that needs to match. -->
+<video id="video-a" src="videos/screen-a.mp4" loop muted playsinline preload="auto" crossorigin="anonymous" style="display:none;"></video>
+<video id="video-b" src="videos/screen-b.mp4" loop muted playsinline preload="auto" crossorigin="anonymous" style="display:none;"></video>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+
+/* ---------------------------------------------------------------------
+   CONFIG — the numbers you're most likely to want to tweak live here.
+--------------------------------------------------------------------- */
+const CONFIG = {
+  fogColor: 0x030405,
+  fogDensity: 0.045,
+
+  waterColor: 0x061018,
+  waterSize: 200,
+  waterSegments: 140,
+  waveHeight: 0.06,
+  waveSpeed: 0.35,
+
+  pathLength: 26,       // how far the boardwalk runs from the start
+  pathWidth: 1.4,
+  plankDepth: 0.5,
+  plankGap: 0.06,
+  pathY: 0.02,           // boardwalk sits just above the water surface
+
+  screenWidth: 4.2,
+  screenHeight: 2.36,    // 16:9
+  screenDistance: 15,    // how far along the path the screens hover
+  screenSpread: 3.2,     // lateral distance of each screen from the path centre
+  screenHeightAbove: 2.4,
+  screenAngle: Math.PI / 7.5,  // how sharply each screen turns away from the other
+
+  eyeHeight: 1.65,
+  walkSpeed: 3.4,
+  boundsRadius: 34,      // soft edge of the walkable area
+};
+
+/* ---------------------------------------------------------------------
+   RENDERER / SCENE / CAMERA
+--------------------------------------------------------------------- */
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(CONFIG.fogColor, CONFIG.fogDensity);
+scene.background = new THREE.Color(CONFIG.fogColor);
+
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(0, CONFIG.eyeHeight, 6);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ---------------------------------------------------------------------
+   LIGHTING — dim, cool, atmospheric. The screens do most of the lighting.
+--------------------------------------------------------------------- */
+scene.add(new THREE.AmbientLight(0x1a2830, 0.9));
+
+const moon = new THREE.DirectionalLight(0x3a4d55, 0.35);
+moon.position.set(-8, 18, -6);
+scene.add(moon);
+
+/* ---------------------------------------------------------------------
+   WATER — a displaced plane, gently animated, dark and half-reflective.
+--------------------------------------------------------------------- */
+const waterGeo = new THREE.PlaneGeometry(
+  CONFIG.waterSize, CONFIG.waterSize, CONFIG.waterSegments, CONFIG.waterSegments
+);
+waterGeo.rotateX(-Math.PI / 2);
+const waterPos = waterGeo.attributes.position;
+const waterBase = new Float32Array(waterPos.count);
+for (let i = 0; i < waterPos.count; i++) waterBase[i] = waterPos.getY(i);
+
+const waterMat = new THREE.MeshStandardMaterial({
+  color: CONFIG.waterColor,
+  roughness: 0.25,
+  metalness: 0.15,
+  envMapIntensity: 0.6,
+});
+const water = new THREE.Mesh(waterGeo, waterMat);
+water.position.y = -0.02;
+scene.add(water);
+
+/* ---------------------------------------------------------------------
+   BOARDWALK — short planks laid end to end along +Z, slightly uneven.
+--------------------------------------------------------------------- */
+const plankMat = new THREE.MeshStandardMaterial({
+  color: 0x14100c,
+  roughness: 0.85,
+  metalness: 0.0,
+});
+const plankLength = CONFIG.plankDepth + CONFIG.plankGap;
+const plankCount = Math.ceil(CONFIG.pathLength / plankLength);
+const pathGroup = new THREE.Group();
+for (let i = 0; i < plankCount; i++) {
+  const plank = new THREE.Mesh(
+    new THREE.BoxGeometry(CONFIG.pathWidth, 0.06, CONFIG.plankDepth),
+    plankMat
+  );
+  plank.position.set(
+    (Math.random() - 0.5) * 0.03,
+    CONFIG.pathY + (Math.random() - 0.5) * 0.01,
+    -i * plankLength
+  );
+  plank.rotation.y = (Math.random() - 0.5) * 0.02;
+  pathGroup.add(plank);
+}
+scene.add(pathGroup);
+
+// faint guiding line down the centre of the walkway
+const guide = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.03, CONFIG.pathLength),
+  new THREE.MeshBasicMaterial({ color: 0x3d5a5f, transparent: true, opacity: 0.35 })
+);
+guide.rotation.x = -Math.PI / 2;
+guide.position.set(0, CONFIG.pathY + 0.035, -CONFIG.pathLength / 2);
+scene.add(guide);
+
+/* ---------------------------------------------------------------------
+   SCREENS — two video-textured planes, hovering, angled away from each
+   other, positioned ahead and to either side of the walkway's end.
+--------------------------------------------------------------------- */
+const videoA = document.getElementById("video-a");
+const videoB = document.getElementById("video-b");
+const texA = new THREE.VideoTexture(videoA);
+const texB = new THREE.VideoTexture(videoB);
+texA.colorSpace = THREE.SRGBColorSpace;
+texB.colorSpace = THREE.SRGBColorSpace;
+
+function makeScreen(texture, x, rotationY, glowColor) {
+  const group = new THREE.Group();
+
+  // subtle glowing frame, slightly larger, sitting behind the video plane
+  const frame = new THREE.Mesh(
+    new THREE.PlaneGeometry(CONFIG.screenWidth + 0.14, CONFIG.screenHeight + 0.14),
+    new THREE.MeshBasicMaterial({ color: glowColor, transparent: true, opacity: 0.18 })
+  );
+  frame.position.z = -0.02;
+  group.add(frame);
+
+  const screenMat = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false });
+  const screen = new THREE.Mesh(
+    new THREE.PlaneGeometry(CONFIG.screenWidth, CONFIG.screenHeight),
+    screenMat
+  );
+  group.add(screen);
+
+  const light = new THREE.PointLight(glowColor, 3.5, 12, 2);
+  light.position.set(0, 0, 1.5);
+  group.add(light);
+
+  group.position.set(x, CONFIG.screenHeightAbove, -CONFIG.screenDistance);
+  group.rotation.y = rotationY;
+  scene.add(group);
+  return group;
+}
+
+const screenA = makeScreen(texA, -CONFIG.screenSpread / 2, CONFIG.screenAngle, 0x4a6a72);
+const screenB = makeScreen(texB, CONFIG.screenSpread / 2, -CONFIG.screenAngle, 0x6a5548);
+
+/* ---------------------------------------------------------------------
+   POINTER-LOCK WALKING CONTROLS
+--------------------------------------------------------------------- */
+const controls = new PointerLockControls(camera, renderer.domElement);
+const intro = document.getElementById("intro");
+const hud = document.getElementById("hud");
+const crosshair = document.getElementById("crosshair");
+
+let started = false;
+
+intro.addEventListener("click", () => {
+  controls.lock();
+});
+
+controls.addEventListener("lock", () => {
+  intro.classList.add("hidden");
+  hud.classList.add("visible");
+  crosshair.classList.add("visible");
+  if (!started) {
+    started = true;
+    videoA.play().catch(() => {});
+    videoB.play().catch(() => {});
+  }
+});
+
+controls.addEventListener("unlock", () => {
+  intro.classList.remove("hidden");
+  hud.classList.remove("visible");
+  crosshair.classList.remove("visible");
+});
+
+const move = { forward: false, back: false, left: false, right: false };
+window.addEventListener("keydown", (e) => {
+  switch (e.code) {
+    case "KeyW": case "ArrowUp": move.forward = true; break;
+    case "KeyS": case "ArrowDown": move.back = true; break;
+    case "KeyA": case "ArrowLeft": move.left = true; break;
+    case "KeyD": case "ArrowRight": move.right = true; break;
+  }
+});
+window.addEventListener("keyup", (e) => {
+  switch (e.code) {
+    case "KeyW": case "ArrowUp": move.forward = false; break;
+    case "KeyS": case "ArrowDown": move.back = false; break;
+    case "KeyA": case "ArrowLeft": move.left = false; break;
+    case "KeyD": case "ArrowRight": move.right = false; break;
+  }
+});
+
+const velocity = new THREE.Vector3();
+const clock = new THREE.Clock();
+
+function updateMovement(dt) {
+  velocity.x -= velocity.x * 8.0 * dt;
+  velocity.z -= velocity.z * 8.0 * dt;
+
+  const dir = new THREE.Vector3(
+    Number(move.right) - Number(move.left),
+    0,
+    Number(move.back) - Number(move.forward)
+  );
+  if (dir.lengthSq() > 0) dir.normalize();
+
+  velocity.x -= dir.x * CONFIG.walkSpeed * 10 * dt;
+  velocity.z -= dir.z * CONFIG.walkSpeed * 10 * dt;
+
+  controls.moveRight(-velocity.x * dt);
+  controls.moveForward(-velocity.z * dt);
+
+  // keep the visitor within a soft circular bound around the scene
+  const p = controls.getObject().position;
+  const dist = Math.hypot(p.x, p.z);
+  if (dist > CONFIG.boundsRadius) {
+    const scale = CONFIG.boundsRadius / dist;
+    p.x *= scale;
+    p.z *= scale;
+  }
+  p.y = CONFIG.eyeHeight;
+}
+
+/* ---------------------------------------------------------------------
+   ANIMATE
+--------------------------------------------------------------------- */
+function animateWater(t) {
+  for (let i = 0; i < waterPos.count; i++) {
+    const x = waterPos.getX(i);
+    const z = waterPos.getZ(i);
+    const y = waterBase[i] +
+      Math.sin(x * 0.35 + t * CONFIG.waveSpeed) * CONFIG.waveHeight +
+      Math.cos(z * 0.28 + t * CONFIG.waveSpeed * 0.8) * CONFIG.waveHeight;
+    waterPos.setY(i, y);
+  }
+  waterPos.needsUpdate = true;
+  waterGeo.computeVertexNormals();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const t = clock.elapsedTime;
+
+  animateWater(t);
+
+  if (controls.isLocked) {
+    updateMovement(dt);
+  }
+
+  // slow drift on the point-light intensity so the water glow breathes
+  screenA.children[2].intensity = 3.2 + Math.sin(t * 0.6) * 0.4;
+  screenB.children[2].intensity = 3.2 + Math.sin(t * 0.6 + 1.3) * 0.4;
+
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+
+</body>
+</html>
