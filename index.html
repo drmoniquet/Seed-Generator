@@ -162,12 +162,9 @@
 <div id="play-prompt">click to play both screens — sound on</div>
 <div id="home-hint">press H to return home</div>
 
-<!-- Hidden source video elements. Their frames are streamed onto the two
-     hovering screens as textures. Replace the src files in /videos/ with
-     your own exports; filenames below are the only thing that needs to match.
-     They start muted and paused on their first frame (a static image) until
-     the visitor clicks once inside the space — that click unmutes and plays
-     both together. -->
+<!-- Video elements are streamed onto the two hovering screens as textures. Replace the src files in /videos/ with
+     new exports but keep filenames below-- needs to match.
+ . -->
 <video id="video-a" src="videos/screen-a.webm" loop muted playsinline preload="auto" crossorigin="anonymous" style="display:none;"></video>
 <video id="video-b" src="videos/screen-b.webm" loop muted playsinline preload="auto" crossorigin="anonymous" style="display:none;"></video>
 
@@ -185,7 +182,7 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 
 /* ---------------------------------------------------------------------
-   CONFIG — the numbers you're most likely to want to tweak live here.
+   CONFIG — the numbers to tweak are here.
 --------------------------------------------------------------------- */
 const CONFIG = {
   fogColor: 0x030405,
