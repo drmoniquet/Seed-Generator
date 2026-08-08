@@ -149,7 +149,7 @@
 
 <div id="intro">
   <h1>Seed Generator</h1>
-  <p>How can we grow better futures? A journey away from AI.</p>
+  <p>How can we seed and grow better futures? A poetic journey away from AI.</p>
   <p>WASD or arrow keys to walk &nbsp;·&nbsp; mouse to look &nbsp;·&nbsp; H to return home &nbsp;·&nbsp; Esc to release</p>
   <div class="enter">click to enter</div>
   <div class="credits-group">
@@ -162,12 +162,9 @@
 <div id="play-prompt">click to play both screens — sound on</div>
 <div id="home-hint">press H to return home</div>
 
-<!-- Hidden source video elements. Their frames are streamed onto the two
+<!-- Hidden source video elements streamed onto the two
      hovering screens as textures. Replace the src files in /videos/ with
-     your own exports; filenames below are the only thing that needs to match.
-     They start muted and paused on their first frame (a static image) until
-     the visitor clicks once inside the space — that click unmutes and plays
-     both together. -->
+     but keep filenames. -->
 <video id="video-a" src="https://pub-3b648ac262294714a9147d7e99d9554e.r2.dev/screen-a.webm" loop muted playsinline preload="auto" crossorigin="anonymous" style="position:fixed; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none;"></video>
 <video id="video-b" src="https://pub-3b648ac262294714a9147d7e99d9554e.r2.dev/screen-b.webm" loop muted playsinline preload="auto" crossorigin="anonymous" style="position:fixed; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none;"></video>
 
@@ -197,7 +194,7 @@ const CONFIG = {
   waveHeight: 0.06,
   waveSpeed: 0.35,
 
-  pathLength: 9,        // short walk — just far enough to feel deliberate
+  pathLength: 9,        // short walk 
   pathWidth: 1.4,
   plankDepth: 0.5,
   plankGap: 0.06,
