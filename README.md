@@ -1,1 +1,1 @@
-https://drmoniquet.github.io/Seed-Generator/index.html 
+ https://drmoniquet.github.io/Seed-Generator/ 
