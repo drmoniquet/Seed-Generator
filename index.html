@@ -182,7 +182,7 @@ import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 
 /* ---------------------------------------------------------------------
-   CONFIG — the numbers you're most likely to want to tweak live here.
+   CONFIG — the numbers to tweak.
 --------------------------------------------------------------------- */
 const CONFIG = {
   fogColor: 0x030405,
@@ -235,8 +235,7 @@ window.addEventListener("resize", () => {
 });
 
 /* ---------------------------------------------------------------------
-   LIGHTING — cool and atmospheric, but brighter now, anchored by a
-   visible moon that doubles as the directional light's source.
+   LIGHTING — anchored by a visible moon that doubles as the directional light's source.
 --------------------------------------------------------------------- */
 scene.add(new THREE.AmbientLight(0x38505a, 1.9));
 
