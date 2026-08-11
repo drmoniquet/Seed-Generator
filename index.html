@@ -185,12 +185,6 @@
 <div id="play-prompt">click to play both screens — sound on</div>
 <div id="home-hint">press H to return home</div>
 
-<!-- Hidden source video elements. Their frames are streamed onto the two
-     hovering screens as textures. Replace the src files in /videos/ with
-     your own exports; filenames below are the only thing that needs to match.
-     They start muted and paused on their first frame (a static image) until
-     the visitor clicks once inside the space — that click unmutes and plays
-     both together. -->
 <video id="video-a" src="https://pub-3b648ac262294714a9147d7e99d9554e.r2.dev/screen-a.webm" loop muted playsinline preload="auto" crossorigin="anonymous" style="position:fixed; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none;"></video>
 <video id="video-b" src="https://pub-3b648ac262294714a9147d7e99d9554e.r2.dev/screen-b.webm" loop muted playsinline preload="auto" crossorigin="anonymous" style="position:fixed; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none;"></video>
 
@@ -205,53 +199,53 @@
 
 <script type="module">
 import * as THREE from "three";
+
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 
-/* ---------------------------------------------------------------------
-   CONFIG — the numbers you're most likely to want to tweak live here.
---------------------------------------------------------------------- */
 const CONFIG = {
-  fogColor: 0x07080a,
-  fogDensity: 0.032,
-
-  waterColor: 0x0d1512,
+  fogColor: 460810,
+  fogDensity: .032,
+  waterColor: 857362,
   waterSize: 200,
   waterSegments: 140,
-  waveHeight: 0.06,
-  waveSpeed: 0.35,
-
-  pathLength: 9,        // short walk — just far enough to feel deliberate
+  waveHeight: .06,
+  waveSpeed: .35,
+  pathLength: 9,
   pathWidth: 1.4,
-  plankDepth: 0.5,
-  plankGap: 0.06,
-  pathY: 0.02,           // boardwalk sits just above the water surface
-
+  plankDepth: .5,
+  plankGap: .06,
+  pathY: .02,
   screenWidth: 10.8,
-  screenHeight: 4.05,   // 24:9 — ultra-wide; footage will letterbox to fit
-  screenDistance: 8,    // pulled back a bit more for the wider screens
+  screenHeight: 4.05,
+  screenDistance: 8,
   screenSpread: 6.6,
-  screenHeightAbove: 3.0,
-  screenAngle: Math.PI / 7.5,  // how sharply each screen turns away from the other
-
+  screenHeightAbove: 3,
+  screenAngle: Math.PI / 7.5,
   eyeHeight: 1.65,
   walkSpeed: 3.4,
-  boundsRadius: 18,      // soft edge of the walkable area
+  boundsRadius: 18
 };
 
-/* ---------------------------------------------------------------------
-   RENDERER / SCENE / CAMERA
---------------------------------------------------------------------- */
-const scene = new THREE.Scene();
+const scene = new THREE.Scene;
+
 scene.fog = new THREE.FogExp2(CONFIG.fogColor, CONFIG.fogDensity);
+
 scene.background = new THREE.Color(CONFIG.fogColor);
 
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 200);
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, .1, 200);
+
 camera.position.set(0, CONFIG.eyeHeight, 2.5);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({
+  antialias: true
+});
+
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
 renderer.setSize(window.innerWidth, window.innerHeight);
+
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+
 document.body.appendChild(renderer.domElement);
 
 window.addEventListener("resize", () => {
@@ -260,107 +254,174 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-/* ---------------------------------------------------------------------
-   LIGHTING — cool and atmospheric, but brighter now, anchored by a
-   visible moon that doubles as the directional light's source.
---------------------------------------------------------------------- */
-scene.add(new THREE.AmbientLight(0x4a5548, 2.3));
+const skyTexture = (new THREE.TextureLoader).load("images/night-sky.jpg");
 
-const moonLight = new THREE.DirectionalLight(0xc8cbb8, 1.4);
+skyTexture.colorSpace = THREE.SRGBColorSpace;
+
+const sky = new THREE.Mesh(new THREE.SphereGeometry(180, 48, 32), new THREE.MeshBasicMaterial({
+  map: skyTexture,
+  side: THREE.BackSide,
+  fog: false
+}));
+
+scene.add(sky);
+
+scene.add(new THREE.AmbientLight(4871496, 2.3));
+
+const moonLight = new THREE.DirectionalLight(13159352, 1.4);
+
 moonLight.position.set(-18, 34, -22);
+
 scene.add(moonLight);
 
-// A soft fill so the side away from the moon isn't pitch black
-const fill = new THREE.HemisphereLight(0x5c6250, 0x1c2018, 1.05);
+const fill = new THREE.HemisphereLight(6054480, 1843224, 1.05);
+
 scene.add(fill);
 
-// The moon itself: a pale, self-lit disc hung far off in the distance,
-// plus a soft halo behind it so it reads as a glowing source rather
-// than a flat cutout.
-const moonGroup = new THREE.Group();
+const moonGroup = new THREE.Group;
 
-const moonBody = new THREE.Mesh(
-  new THREE.SphereGeometry(6, 32, 32),
-  new THREE.MeshBasicMaterial({ color: 0xe8ecec, fog: false })
-);
+const moonBody = new THREE.Mesh(new THREE.SphereGeometry(6, 32, 32), new THREE.MeshBasicMaterial({
+  color: 15265004,
+  fog: false
+}));
+
 moonGroup.add(moonBody);
 
-const moonHalo = new THREE.Mesh(
-  new THREE.SphereGeometry(9, 32, 32),
-  new THREE.MeshBasicMaterial({
-    color: 0xcdd6d8,
-    transparent: true,
-    opacity: 0.12,
-    fog: false,
-    depthWrite: false,
-  })
-);
+const moonHalo = new THREE.Mesh(new THREE.SphereGeometry(9, 32, 32), new THREE.MeshBasicMaterial({
+  color: 13489880,
+  transparent: true,
+  opacity: .12,
+  fog: false,
+  depthWrite: false
+}));
+
 moonGroup.add(moonHalo);
 
-// Positioned in the same direction as moonLight, far enough away that
-// it reads as a distant object rather than something you could walk to.
 moonGroup.position.copy(moonLight.position).multiplyScalar(3.2);
+
 scene.add(moonGroup);
 
-/* ---------------------------------------------------------------------
-   WATER — a displaced plane, gently animated, dark and half-reflective.
---------------------------------------------------------------------- */
-const waterGeo = new THREE.PlaneGeometry(
-  CONFIG.waterSize, CONFIG.waterSize, CONFIG.waterSegments, CONFIG.waterSegments
-);
+const waterGeo = new THREE.PlaneGeometry(CONFIG.waterSize, CONFIG.waterSize, CONFIG.waterSegments, CONFIG.waterSegments);
+
 waterGeo.rotateX(-Math.PI / 2);
+
 const waterPos = waterGeo.attributes.position;
+
 const waterBase = new Float32Array(waterPos.count);
+
 for (let i = 0; i < waterPos.count; i++) waterBase[i] = waterPos.getY(i);
 
 const waterMat = new THREE.MeshStandardMaterial({
   color: CONFIG.waterColor,
-  roughness: 0.25,
-  metalness: 0.15,
-  envMapIntensity: 0.6,
+  roughness: .25,
+  metalness: .15,
+  envMapIntensity: .6
 });
+
 const water = new THREE.Mesh(waterGeo, waterMat);
-water.position.y = -0.02;
+
+water.position.y = -.02;
+
 scene.add(water);
 
-/* ---------------------------------------------------------------------
-   BOARDWALK — short planks laid end to end along +Z, slightly uneven,
-   each with a touch of natural color variation like real weathered wood.
---------------------------------------------------------------------- */
-const plankBaseColor = new THREE.Color(0x5a4630);
+function makeWoodGrainTexture(baseHex, seed) {
+  const w = 512, h = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const base = new THREE.Color(baseHex);
+  const toRGB = c => `rgb(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)})`;
+  ctx.fillStyle = toRGB(base);
+  ctx.fillRect(0, 0, w, h);
+  const streakCount = 90;
+  for (let i = 0; i < streakCount; i++) {
+    const y = Math.random() * h;
+    const lightness = (Math.random() - .5) * .16;
+    const streakColor = base.clone().offsetHSL(0, (Math.random() - .5) * .02, lightness);
+    ctx.strokeStyle = toRGB(streakColor);
+    ctx.globalAlpha = .15 + Math.random() * .25;
+    ctx.lineWidth = .6 + Math.random() * 1.8;
+    ctx.beginPath();
+    let x = 0;
+    let yy = y;
+    ctx.moveTo(x, yy);
+    while (x < w) {
+      x += 18 + Math.random() * 30;
+      yy += (Math.random() - .5) * 6;
+      ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const knotCount = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < knotCount; i++) {
+    const kx = Math.random() * w;
+    const ky = Math.random() * h;
+    const kr = 4 + Math.random() * 6;
+    const knotColor = base.clone().offsetHSL(0, .05, -.22);
+    const grad = ctx.createRadialGradient(kx, ky, 0, kx, ky, kr * 2.2);
+    grad.addColorStop(0, toRGB(knotColor));
+    grad.addColorStop(.5, toRGB(base.clone().offsetHSL(0, 0, -.1)));
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(kx, ky, kr * 2.2, kr, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const imgData = ctx.getImageData(0, 0, w, h);
+  for (let p = 0; p < imgData.data.length; p += 4) {
+    const n = (Math.random() - .5) * 14;
+    imgData.data[p] = Math.min(255, Math.max(0, imgData.data[p] + n));
+    imgData.data[p + 1] = Math.min(255, Math.max(0, imgData.data[p + 1] + n));
+    imgData.data[p + 2] = Math.min(255, Math.max(0, imgData.data[p + 2] + n));
+  }
+  ctx.putImageData(imgData, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const plankBaseColor = 5916208;
+
+const WOOD_TEXTURE_VARIANTS = 4;
+
+const woodTextures = [];
+
+for (let i = 0; i < WOOD_TEXTURE_VARIANTS; i++) {
+  woodTextures.push(makeWoodGrainTexture(plankBaseColor, i));
+}
+
 const plankLength = CONFIG.plankDepth + CONFIG.plankGap;
+
 const plankCount = Math.ceil(CONFIG.pathLength / plankLength);
-const pathGroup = new THREE.Group();
+
+const pathGroup = new THREE.Group;
+
 for (let i = 0; i < plankCount; i++) {
-  const shade = plankBaseColor.clone().offsetHSL(0, (Math.random() - 0.5) * 0.03, (Math.random() - 0.5) * 0.08);
   const plankMat = new THREE.MeshStandardMaterial({
-    color: shade,
-    roughness: 0.95,
-    metalness: 0.0,
+    map: woodTextures[i % WOOD_TEXTURE_VARIANTS],
+    roughness: .92,
+    metalness: 0
   });
-  const plank = new THREE.Mesh(
-    new THREE.BoxGeometry(CONFIG.pathWidth, 0.06, CONFIG.plankDepth),
-    plankMat
-  );
-  plank.position.set(
-    (Math.random() - 0.5) * 0.03,
-    CONFIG.pathY + (Math.random() - 0.5) * 0.01,
-    -i * plankLength
-  );
-  plank.rotation.y = (Math.random() - 0.5) * 0.02;
+  const plank = new THREE.Mesh(new THREE.BoxGeometry(CONFIG.pathWidth, .06, CONFIG.plankDepth), plankMat);
+  plank.position.set((Math.random() - .5) * .03, CONFIG.pathY + (Math.random() - .5) * .01, -i * plankLength);
+  plank.rotation.y = (Math.random() - .5) * .02;
   pathGroup.add(plank);
 }
+
 scene.add(pathGroup);
 
-/* ---------------------------------------------------------------------
-   PARTICLES — a very sparse field of drifting motes, for atmosphere.
-   Slow, quiet, faintly luminous; not tied to the screens in any way.
---------------------------------------------------------------------- */
 const PARTICLE_COUNT = 100;
+
 const PARTICLE_CEILING = 6.5;
-const particleGeo = new THREE.BufferGeometry();
+
+const particleGeo = new THREE.BufferGeometry;
+
 const particlePositions = new Float32Array(PARTICLE_COUNT * 3);
+
 const particleSpeeds = new Float32Array(PARTICLE_COUNT);
+
 const particleSway = new Float32Array(PARTICLE_COUNT);
 
 for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -368,41 +429,46 @@ for (let i = 0; i < PARTICLE_COUNT; i++) {
   const angle = Math.random() * Math.PI * 2;
   particlePositions[i * 3 + 0] = Math.cos(angle) * radius;
   particlePositions[i * 3 + 1] = Math.random() * PARTICLE_CEILING;
-  particlePositions[i * 3 + 2] = Math.sin(angle) * radius - CONFIG.screenDistance * 0.5;
-  particleSpeeds[i] = 0.04 + Math.random() * 0.06;
+  particlePositions[i * 3 + 2] = Math.sin(angle) * radius - CONFIG.screenDistance * .5;
+  particleSpeeds[i] = .04 + Math.random() * .06;
   particleSway[i] = Math.random() * Math.PI * 2;
 }
+
 particleGeo.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
 
 const particleMat = new THREE.PointsMaterial({
-  color: 0xcdd6d8,
-  size: 0.03,
+  color: 13489880,
+  size: .03,
   transparent: true,
-  opacity: 0.14,
+  opacity: .14,
   depthWrite: false,
-  sizeAttenuation: true,
+  sizeAttenuation: true
 });
+
 const particles = new THREE.Points(particleGeo, particleMat);
+
 scene.add(particles);
 
-/* ---------------------------------------------------------------------
-   SCREENS — two video-textured planes, hovering, angled away from each
-   other, positioned ahead and to either side of the walkway's end.
---------------------------------------------------------------------- */
 const videoA = document.getElementById("video-a");
+
 const videoB = document.getElementById("video-b");
-const videos = [videoA, videoB];
+
+const videos = [ videoA, videoB ];
+
 const texA = new THREE.VideoTexture(videoA);
+
 const texB = new THREE.VideoTexture(videoB);
+
 texA.colorSpace = THREE.SRGBColorSpace;
+
 texB.colorSpace = THREE.SRGBColorSpace;
 
-// Force each video to display its first frame as a still image while
-// paused, rather than sitting black until playback begins.
-videos.forEach((v) => {
+videos.forEach(v => {
   v.addEventListener("loadeddata", () => {
-    if (v.currentTime === 0) v.currentTime = 0.01;
-  }, { once: true });
+    if (v.currentTime === 0) v.currentTime = .01;
+  }, {
+    once: true
+  });
 });
 
 function makeGlowTexture(colorHex) {
@@ -415,12 +481,9 @@ function makeGlowTexture(colorHex) {
   const r = Math.round(color.r * 255);
   const g = Math.round(color.g * 255);
   const b = Math.round(color.b * 255);
-  const gradient = ctx.createRadialGradient(
-    size / 2, size / 2, 0,
-    size / 2, size / 2, size / 2
-  );
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
   gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.5)`);
-  gradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, 0.22)`);
+  gradient.addColorStop(.4, `rgba(${r}, ${g}, ${b}, 0.22)`);
   gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
@@ -430,45 +493,29 @@ function makeGlowTexture(colorHex) {
 }
 
 function makeScreen(texture, videoEl, x, rotationY, glowColor, side) {
-  const group = new THREE.Group();
-
-  // a soft, genuinely diffuse glow behind the screen — a radial gradient
-  // rather than a flat tinted rectangle, so it reads as ambient light
-  // spilling off the film rather than a game-style highlight outline
+  const group = new THREE.Group;
   const glowTex = makeGlowTexture(glowColor);
   const haloSize = Math.max(CONFIG.screenWidth, CONFIG.screenHeight) * 1.9;
-  const halo = new THREE.Mesh(
-    new THREE.PlaneGeometry(haloSize, haloSize),
-    new THREE.MeshBasicMaterial({
-      map: glowTex,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    })
-  );
-  halo.position.z = -0.04;
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(haloSize, haloSize), new THREE.MeshBasicMaterial({
+    map: glowTex,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  }));
+  halo.position.z = -.04;
   group.add(halo);
-
-  // solid black backing at the full frame size — this is what shows
-  // through as letterbox/pillarbox space if the footage isn't the same
-  // shape as the frame
-  const backing = new THREE.Mesh(
-    new THREE.PlaneGeometry(CONFIG.screenWidth, CONFIG.screenHeight),
-    new THREE.MeshBasicMaterial({ color: 0x000000 })
-  );
-  backing.position.z = -0.02;
+  const backing = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.screenWidth, CONFIG.screenHeight), new THREE.MeshBasicMaterial({
+    color: 0
+  }));
+  backing.position.z = -.02;
   group.add(backing);
-
-  // the film itself: starts filling the frame, then rescales to match the
-  // footage's real aspect ratio once its dimensions are known, so it's
-  // undistorted. If the footage is narrower than the frame (pillarboxed),
-  // it's pushed to this screen's outer edge — away from the other screen —
-  // so the leftover black space collects in the middle, between the two.
-  const screenMat = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false });
+  const screenMat = new THREE.MeshBasicMaterial({
+    map: texture,
+    toneMapped: false
+  });
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), screenMat);
   screen.scale.set(CONFIG.screenWidth, CONFIG.screenHeight, 1);
   group.add(screen);
-
   function fitToFootage() {
     if (!videoEl.videoWidth || !videoEl.videoHeight) return;
     const frameAspect = CONFIG.screenWidth / CONFIG.screenHeight;
@@ -482,11 +529,8 @@ function makeScreen(texture, videoEl, x, rotationY, glowColor, side) {
       w = h * footageAspect;
     }
     screen.scale.set(w, h, 1);
-
-    // horizontal leftover only exists when the footage is narrower than
-    // the frame (pillarboxed) — shove it outward on that axis
     const leftoverX = CONFIG.screenWidth - w;
-    if (leftoverX > 0.001 && side) {
+    if (leftoverX > .001 && side) {
       screen.position.x = side === "left" ? -leftoverX / 2 : leftoverX / 2;
     } else {
       screen.position.x = 0;
@@ -494,38 +538,40 @@ function makeScreen(texture, videoEl, x, rotationY, glowColor, side) {
   }
   videoEl.addEventListener("loadedmetadata", fitToFootage);
   if (videoEl.readyState >= 1) fitToFootage();
-
   const light = new THREE.PointLight(glowColor, 4, 16, 1.5);
   light.position.set(0, 0, 1.5);
   group.add(light);
-
   group.position.set(x, CONFIG.screenHeightAbove, -CONFIG.screenDistance);
   group.rotation.y = rotationY;
   scene.add(group);
   return group;
 }
 
-const screenA = makeScreen(texA, videoA, -CONFIG.screenSpread / 2, CONFIG.screenAngle, 0x4a6a72, "left");
-const screenB = makeScreen(texB, videoB, CONFIG.screenSpread / 2, -CONFIG.screenAngle, 0x6a5548, "right");
+const screenA = makeScreen(texA, videoA, -CONFIG.screenSpread / 2, CONFIG.screenAngle, 4876914, "left");
 
-/* ---------------------------------------------------------------------
-   POINTER-LOCK WALKING CONTROLS
---------------------------------------------------------------------- */
+const screenB = makeScreen(texB, videoB, CONFIG.screenSpread / 2, -CONFIG.screenAngle, 6968648, "right");
+
 const controls = new PointerLockControls(camera, renderer.domElement);
+
 const intro = document.getElementById("intro");
+
 const hud = document.getElementById("hud");
+
 const crosshair = document.getElementById("crosshair");
+
 const playPrompt = document.getElementById("play-prompt");
+
 const homeHint = document.getElementById("home-hint");
 
-let entered = false;   // has the visitor clicked past the intro
-let playing = false;   // have the films been started yet
+let entered = false;
+
+let playing = false;
 
 intro.addEventListener("click", () => {
   controls.lock();
 });
 
-document.querySelector(".credits-link").addEventListener("click", (e) => {
+document.querySelector(".credits-link").addEventListener("click", e => {
   e.stopPropagation();
 });
 
@@ -548,13 +594,11 @@ controls.addEventListener("unlock", () => {
   homeHint.classList.remove("visible");
 });
 
-// One click anywhere inside the space (after entering) starts both films
-// together, with sound. Clicking again pauses them; click once more to
-// resume. Until the first click they sit on their first frame, static.
 function waitUntilReady(video) {
-  return new Promise((resolve) => {
-    if (video.readyState >= 3) resolve();
-    else video.addEventListener("canplay", () => resolve(), { once: true });
+  return new Promise(resolve => {
+    if (video.readyState >= 3) resolve(); else video.addEventListener("canplay", () => resolve(), {
+      once: true
+    });
   });
 }
 
@@ -562,17 +606,19 @@ async function playBoth() {
   playing = true;
   playPrompt.classList.add("fading");
   setTimeout(() => playPrompt.classList.remove("visible"), 800);
-
-  videos.forEach((v) => { v.currentTime = 0; });
+  videos.forEach(v => {
+    v.currentTime = 0;
+  });
   await Promise.all(videos.map(waitUntilReady));
-  videos.forEach((v) => { v.muted = false; });
-  await Promise.all(videos.map((v) => v.play().catch(() => {})));
-
+  videos.forEach(v => {
+    v.muted = false;
+  });
+  await Promise.all(videos.map(v => v.play().catch(() => {})));
   hud.textContent = "playing — click to stop, esc to release the view";
 }
 
 function pauseBoth() {
-  videos.forEach((v) => v.pause());
+  videos.forEach(v => v.pause());
   hud.textContent = "stopped — click to play again, esc to release the view";
 }
 
@@ -580,7 +626,7 @@ function toggleBoth() {
   if (!playing) {
     playBoth();
   } else if (videoA.paused) {
-    videos.forEach((v) => v.play().catch(() => {}));
+    videos.forEach(v => v.play().catch(() => {}));
     hud.textContent = "playing — click to stop, esc to release the view";
   } else {
     pauseBoth();
@@ -591,41 +637,68 @@ renderer.domElement.addEventListener("mousedown", () => {
   if (entered) toggleBoth();
 });
 
-const move = { forward: false, back: false, left: false, right: false };
-window.addEventListener("keydown", (e) => {
+const move = {
+  forward: false,
+  back: false,
+  left: false,
+  right: false
+};
+
+window.addEventListener("keydown", e => {
   switch (e.code) {
-    case "KeyW": case "ArrowUp": move.forward = true; break;
-    case "KeyS": case "ArrowDown": move.back = true; break;
-    case "KeyA": case "ArrowLeft": move.left = true; break;
-    case "KeyD": case "ArrowRight": move.right = true; break;
-  }
-});
-window.addEventListener("keyup", (e) => {
-  switch (e.code) {
-    case "KeyW": case "ArrowUp": move.forward = false; break;
-    case "KeyS": case "ArrowDown": move.back = false; break;
-    case "KeyA": case "ArrowLeft": move.left = false; break;
-    case "KeyD": case "ArrowRight": move.right = false; break;
+   case "KeyW":
+   case "ArrowUp":
+    move.forward = true;
+    break;
+
+   case "KeyS":
+   case "ArrowDown":
+    move.back = true;
+    break;
+
+   case "KeyA":
+   case "ArrowLeft":
+    move.left = true;
+    break;
+
+   case "KeyD":
+   case "ArrowRight":
+    move.right = true;
+    break;
   }
 });
 
-const clock = new THREE.Clock();
+window.addEventListener("keyup", e => {
+  switch (e.code) {
+   case "KeyW":
+   case "ArrowUp":
+    move.forward = false;
+    break;
 
-// Direct, no-inertia movement: the view stops the instant a key is
-// released, rather than gliding to a stop. Nothing about the framing
-// drifts once you park — only your own key presses move the camera.
+   case "KeyS":
+   case "ArrowDown":
+    move.back = false;
+    break;
+
+   case "KeyA":
+   case "ArrowLeft":
+    move.left = false;
+    break;
+
+   case "KeyD":
+   case "ArrowRight":
+    move.right = false;
+    break;
+  }
+});
+
+const clock = new THREE.Clock;
+
 function updateMovement(dt) {
-  const dir = new THREE.Vector3(
-    Number(move.right) - Number(move.left),
-    0,
-    Number(move.back) - Number(move.forward)
-  );
+  const dir = new THREE.Vector3(Number(move.right) - Number(move.left), 0, Number(move.back) - Number(move.forward));
   if (dir.lengthSq() > 0) dir.normalize();
-
   controls.moveRight(dir.x * CONFIG.walkSpeed * dt);
   controls.moveForward(-dir.z * CONFIG.walkSpeed * dt);
-
-  // keep the visitor within a soft circular bound around the scene
   const p = controls.getObject().position;
   const dist = Math.hypot(p.x, p.z);
   if (dist > CONFIG.boundsRadius) {
@@ -638,11 +711,8 @@ function updateMovement(dt) {
 
 const START_POSITION = new THREE.Vector3(0, CONFIG.eyeHeight, 2.5);
 
-// Fully resets the experience: stops and rewinds both films, puts the
-// camera back at the entrance, and releases the pointer — the same state
-// the piece is in before anyone has clicked "enter."
 function returnHome() {
-  videos.forEach((v) => {
+  videos.forEach(v => {
     v.pause();
     v.currentTime = 0;
     v.muted = true;
@@ -650,25 +720,23 @@ function returnHome() {
   playing = false;
   entered = false;
   hud.textContent = "walking — esc to release the view";
-
   camera.position.copy(START_POSITION);
   camera.rotation.set(0, 0, 0);
-
   if (document.exitPointerLock) document.exitPointerLock();
   controls.unlock();
 }
 
-// Space: same play/stop toggle as clicking. R: restart both from frame 0,
-// in sync, keeping sound state. H: return to the entrance.
-window.addEventListener("keydown", (e) => {
+window.addEventListener("keydown", e => {
   if (e.code === "Space") {
     e.preventDefault();
     if (entered) toggleBoth();
   }
   if (e.key === "r" || e.key === "R") {
     if (!playing) return;
-    videos.forEach((v) => { v.currentTime = 0; });
-    videos.forEach((v) => v.play().catch(() => {}));
+    videos.forEach(v => {
+      v.currentTime = 0;
+    });
+    videos.forEach(v => v.play().catch(() => {}));
     hud.textContent = "playing — click to stop, esc to release the view";
   }
   if (e.key === "h" || e.key === "H") {
@@ -676,16 +744,11 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-/* ---------------------------------------------------------------------
-   ANIMATE
---------------------------------------------------------------------- */
 function animateWater(t) {
   for (let i = 0; i < waterPos.count; i++) {
     const x = waterPos.getX(i);
     const z = waterPos.getZ(i);
-    const y = waterBase[i] +
-      Math.sin(x * 0.35 + t * CONFIG.waveSpeed) * CONFIG.waveHeight +
-      Math.cos(z * 0.28 + t * CONFIG.waveSpeed * 0.8) * CONFIG.waveHeight;
+    const y = waterBase[i] + Math.sin(x * .35 + t * CONFIG.waveSpeed) * CONFIG.waveHeight + Math.cos(z * .28 + t * CONFIG.waveSpeed * .8) * CONFIG.waveHeight;
     waterPos.setY(i, y);
   }
   waterPos.needsUpdate = true;
@@ -698,30 +761,27 @@ function animateParticles(t, dt) {
     let y = pos.getY(i) + particleSpeeds[i] * dt;
     if (y > PARTICLE_CEILING) y = 0;
     pos.setY(i, y);
-
     const baseX = particlePositions[i * 3 + 0];
     const baseZ = particlePositions[i * 3 + 2];
-    const sway = Math.sin(t * 0.15 + particleSway[i]) * 0.15;
+    const sway = Math.sin(t * .15 + particleSway[i]) * .15;
     pos.setX(i, baseX + sway);
-    pos.setZ(i, baseZ + sway * 0.6);
+    pos.setZ(i, baseZ + sway * .6);
   }
   pos.needsUpdate = true;
 }
 
 function animate() {
   requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.1);
+  const dt = Math.min(clock.getDelta(), .1);
   const t = clock.elapsedTime;
-
   animateWater(t);
   animateParticles(t, dt);
-
   if (controls.isLocked) {
     updateMovement(dt);
   }
-
   renderer.render(scene, camera);
 }
+
 animate();
 </script>
 
