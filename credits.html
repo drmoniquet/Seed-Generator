@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+<title>Seed Generator — Credits</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background: #030405;
+    color: #cdd6d8;
+    font-family: "Courier New", Courier, monospace;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12vh 24px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  #credits-bg {
+    position: fixed;
+    inset: 0;
+    background-image: url("images/seedheads-b.jpg");
+    background-size: cover;
+    background-position: center;
+    filter: grayscale(35%) brightness(0.65) contrast(1.05);
+  }
+
+  #credits-overlay {
+    position: fixed;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(3,4,5,0.3) 0%, rgba(3,4,5,0.5) 45%, rgba(3,4,5,0.75) 100%),
+      radial-gradient(ellipse at center, rgba(3,4,5,0.05) 0%, rgba(3,4,5,0.5) 70%);
+  }
+
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+  }
+
+  h1 {
+    font-family: "Special Elite", "Courier New", Courier, monospace;
+    font-weight: 400;
+    font-size: 34px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #cdd6d8;
+    margin: 0 0 10px 0;
+  }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 24px; letter-spacing: 0.05em; }
+  }
+
+  .byline {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #cdd6d8;
+    margin: 0 0 18px 0;
+  }
+
+  .provenance {
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    color: #cdd6d8;
+    margin: 0 0 64px 0;
+  }
+  .provenance em { font-style: normal; color: #cdd6d8; }
+  .provenance a {
+    color: #cdd6d8;
+    text-decoration: none;
+    border-bottom: 1px solid #445052;
+    transition: border-color 0.3s ease;
+  }
+  .provenance a:hover { border-color: #cdd6d8; }
+
+  .credit-block {
+    margin: 0 0 34px 0;
+  }
+
+  .role {
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #cdd6d8;
+    margin: 0 0 10px 0;
+  }
+
+  .names {
+    font-size: 12px;
+    line-height: 1.9;
+    letter-spacing: 0.03em;
+    color: #cdd6d8;
+    margin: 0;
+  }
+
+  .source-note {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #cdd6d8;
+    margin: 10px 0 0 0;
+  }
+  .source-note em { font-style: italic; }
+
+  .rule {
+    width: 32px;
+    height: 1px;
+    background: #2a3234;
+    margin: 40px auto;
+    border: none;
+  }
+
+  .ai-text {
+    font-size: 12px;
+    line-height: 1.9;
+    letter-spacing: 0.03em;
+    color: #cdd6d8;
+    margin: 0 0 24px 0;
+  }
+
+  blockquote.quote {
+    text-align: left;
+    border: 1px solid #445052;
+    padding: 20px 26px;
+    margin: 0 0 22px 40px;
+    font-size: 12px;
+    line-height: 1.85;
+    letter-spacing: 0.02em;
+    color: #cdd6d8;
+  }
+  blockquote.quote p {
+    margin: 0 0 18px 0;
+  }
+  blockquote.quote p:last-child {
+    margin-bottom: 0;
+  }
+
+  .citation {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #cdd6d8;
+  }
+  .citation em { font-style: italic; }
+  .citation a {
+    color: #cdd6d8;
+    text-decoration: none;
+    border-bottom: 1px solid #445052;
+    transition: border-color 0.3s ease;
+  }
+  .citation a:hover { border-color: #cdd6d8; }
+
+  .back {
+    display: inline-block;
+    margin-top: 40px;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #cdd6d8;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color 0.3s ease, border-color 0.3s ease;
+  }
+  .back:hover { color: #cdd6d8; border-color: #445052; }
+</style>
+</head>
+<body>
+
+<div id="credits-bg"></div>
+<div id="credits-overlay"></div>
+
+<main>
+  <h1>Seed Generator</h1>
+  <p class="byline">By Monique Tschofen</p>
+
+  <div class="credit-block">
+    <p class="role">Video and Photography</p>
+    <p class="names">Monique Tschofen<br>Izabella Pruska-Oldenhof</p>
+  </div>
+
+  <div class="credit-block">
+    <p class="role">Moon</p>
+    <p class="names">from <a href="https://spaceandtelescope.com/wp-content/uploads/2023/03/Full-moon.jpg" target="_blank" rel="noopener">Space and Telescope</a></p>
+  </div>
+
+  <div class="credit-block">
+    <p class="role">Text</p>
+    <p class="names">Homer, <em style="font-style: normal; color: #cdd6d8;">The Iliad</em>, translated by Robert Fagles (Penguin Classics, 1990).<br>Monique Tschofen<br>Al Cunningham Rogers</p>
+  </div>
+
+  <div class="credit-block">
+    <p class="role">Music</p>
+    <p class="names">
+      Giovanni Battista Pergolesi, <em style="font-style: normal; color: #cdd6d8;">Stabat Mater</em><br>
+      The Bach Guild, with the Vienna State Opera<br>
+      conducted by Mario Rossi, 1955<br>
+      Teresa Stich-Randall, soprano | Elisabeth Höngen, alto
+    </p>
+  </div>
+
+  <div class="credit-block">
+    <p class="role">Sound Effects</p>
+    <p class="names">BBC Sound<br>Monique Tschofen</p>
+  </div>
+
+  <div class="credit-block">
+    <p class="role">Project Statement</p>
+    <p class="ai-text">This work was a response to the advent of large language models. AI image generation starts from “seeds,” which are numeric blueprints that randomize each generation. Generative AI images thus function as a kind memory machine — drawing together vast archives of the cultural past. But what kind of futures can they generate? We know that data centers are being built that will pollute the environment with noise that disturb insect, bird, and human lives; that will drain aquifers, and pollute waterways; and that will be significant generators of CO<sub>2</sub>.</p>
+    <p class="ai-text">So what else can we do? Build communities. Seed Generator is a collaborative artwork in which the gifting of words and images to the creator provided a template for the generation of futures that we would like to inhabit. We turn away from sterilities to the plants we find in our own back yard, resolving climate grief and fear through poetic observation.</p>
+    <p class="ai-text">The black and white images of plants that open the film were generated in Midjourney in late 2023.</p>
+  </div>
+
+  <hr class="rule">
+
+  <a class="back" href="index.html">return</a>
+</main>
+
+</body>
+</html>
