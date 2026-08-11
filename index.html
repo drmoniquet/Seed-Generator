@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
 <title>Seed Generator</title>
 <style>
   * { box-sizing: border-box; }
@@ -54,9 +57,10 @@
   }
 
   #intro h1 {
+    font-family: "Special Elite", "Courier New", Courier, monospace;
     font-weight: 400;
     font-size: 52px;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     margin: 0 0 26px 0;
     color: #cdd6d8;
@@ -280,10 +284,17 @@ scene.add(fill);
 
 const moonGroup = new THREE.Group;
 
-const moonBody = new THREE.Mesh(new THREE.SphereGeometry(6, 32, 32), new THREE.MeshBasicMaterial({
-  color: 15265004,
+const moonTexture = (new THREE.TextureLoader).load("images/moon-photo.png");
+
+moonTexture.colorSpace = THREE.SRGBColorSpace;
+
+const moonBody = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: moonTexture,
+  transparent: true,
   fog: false
 }));
+
+moonBody.scale.set(12, 12, 1);
 
 moonGroup.add(moonBody);
 
