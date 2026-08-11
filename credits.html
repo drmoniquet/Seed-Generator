@@ -20,6 +20,27 @@
     align-items: center;
     justify-content: center;
     padding: 12vh 24px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  #credits-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-image: url("images/seedheads-b.jpg");
+    background-size: cover;
+    background-position: center;
+    filter: grayscale(35%) brightness(0.55) contrast(1.05);
+  }
+
+  #credits-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(180deg, rgba(3,4,5,0.4) 0%, rgba(3,4,5,0.65) 45%, rgba(3,4,5,0.85) 100%),
+      radial-gradient(ellipse at center, rgba(3,4,5,0.1) 0%, rgba(3,4,5,0.6) 70%);
   }
 
   main {
@@ -154,6 +175,9 @@
 </style>
 </head>
 <body>
+
+<div id="credits-bg"></div>
+<div id="credits-overlay"></div>
 
 <main>
   <h1>Seed Generator</h1>

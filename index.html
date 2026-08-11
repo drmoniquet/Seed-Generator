@@ -38,17 +38,11 @@
     position: absolute;
     inset: 0;
     z-index: -2;
-    display: flex;
-  }
-  #intro-bg .half {
-    width: 50%;
-    height: 100%;
+    background-image: url("images/seedheads-a.jpg");
     background-size: cover;
     background-position: center;
     filter: grayscale(35%) brightness(0.6) contrast(1.05);
   }
-  #intro-bg .half:first-child { background-image: url("images/seedheads-a.jpg"); }
-  #intro-bg .half:last-child { background-image: url("images/seedheads-b.jpg"); }
 
   #intro-overlay {
     position: absolute;
@@ -175,10 +169,7 @@
 <body>
 
 <div id="intro">
-  <div id="intro-bg">
-    <div class="half"></div>
-    <div class="half"></div>
-  </div>
+  <div id="intro-bg"></div>
   <div id="intro-overlay"></div>
   <h1>Seed Generator</h1>
   <p>How can we grow better futures? A journey away from AI.</p>
