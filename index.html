@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seed Generator</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #030405;
+    overflow: hidden;
+    font-family: "Courier New", Courier, monospace;
+  }
+  canvas { display: block; }
+
+  #intro {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #030405;
+    color: #cdd6d8;
+    text-align: center;
+    cursor: pointer;
+    transition: opacity 0.8s ease;
+  }
+  #intro.hidden { opacity: 0; pointer-events: none; }
+  #intro h1 {
+    font-weight: 400;
+    font-size: 52px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 26px 0;
+    color: #cdd6d8;
+  }
+  #intro p {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: #cdd6d8;
+    margin: 6px 0;
+  }
+  #intro .enter {
+    margin-top: 26px;
+    border: 1px solid #445052;
+    padding: 14px 40px;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #cdd6d8;
+  }
+
+  #intro .credits-group {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #intro .credits-link {
+    border: 1px solid #445052;
+    padding: 14px 40px;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #cdd6d8;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.3s ease, border-color 0.3s ease;
+  }
+  #intro .credits-link:hover { color: #cdd6d8; border-color: #5c6a6d; }
+
+  @media (max-width: 480px) {
+    #intro h1 { font-size: 30px; letter-spacing: 0.06em; }
+  }
+
+  #hud {
+    position: fixed;
+    bottom: 18px;
+    left: 18px;
+    z-index: 10;
+    color: #cdd6d8;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  #hud.visible { opacity: 0.6; }
+
+  #crosshair {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    margin: -2px 0 0 -2px;
+    border-radius: 50%;
+    background: rgba(205, 214, 216, 0.35);
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  #crosshair.visible { opacity: 1; }
+
+  #play-prompt {
+    position: fixed;
+    bottom: 60px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    z-index: 10;
+    color: #cdd6d8;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+  }
+  #play-prompt.visible { opacity: 0.75; }
+  #play-prompt.fading { opacity: 0; }
+
+  #home-hint {
+    position: fixed;
+    bottom: 18px;
+    right: 22px;
+    z-index: 10;
+    color: #cdd6d8;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  #home-hint.visible { opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<div id="intro">
+  <h1>Seed Generator</h1>
+  <p>How can we grow better futures? A journey away from AI.</p>
+  <p>WASD or arrow keys to walk &nbsp;·&nbsp; mouse to look &nbsp;·&nbsp; H to return home &nbsp;·&nbsp; Esc to release</p>
+  <div class="enter">click to enter</div>
+  <div class="credits-group">
+    <a class="credits-link" href="credits.html">credits</a>
+  </div>
+</div>
+
+<div id="hud">walking — esc to release the view</div>
+<div id="crosshair"></div>
+<div id="play-prompt">click to play both screens — sound on</div>
+<div id="home-hint">press H to return home</div>
+
+<video id="video-a" src="https://pub-3b648ac262294714a9147d7e99d9554e.r2.dev/screen-a.webm" loop muted playsinline preload="auto" crossorigin="anonymous" style="position:fixed; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none;"></video>
+<video id="video-b" src="https://pub-3b648ac262294714a9147d7e99d9554e.r2.dev/screen-b.webm" loop muted playsinline preload="auto" crossorigin="anonymous" style="position:fixed; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none;"></video>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+
+import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+
+const CONFIG = {
+  fogColor: 460810,
+  fogDensity: .032,
+  waterColor: 857362,
+  waterSize: 200,
+  waterSegments: 140,
+  waveHeight: .06,
+  waveSpeed: .35,
+  pathLength: 9,
+  pathWidth: 1.4,
+  plankDepth: .5,
+  plankGap: .06,
+  pathY: .02,
+  screenWidth: 10.8,
+  screenHeight: 4.05,
+  screenDistance: 8,
+  screenSpread: 6.6,
+  screenHeightAbove: 3,
+  screenAngle: Math.PI / 7.5,
+  eyeHeight: 1.65,
+  walkSpeed: 3.4,
+  boundsRadius: 18
+};
+
+const scene = new THREE.Scene;
+
+scene.fog = new THREE.FogExp2(CONFIG.fogColor, CONFIG.fogDensity);
+
+scene.background = new THREE.Color(CONFIG.fogColor);
+
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, .1, 200);
+
+camera.position.set(0, CONFIG.eyeHeight, 2.5);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: true
+});
+
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+document.body.appendChild(renderer.domElement);
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+scene.add(new THREE.AmbientLight(4871496, 2.3));
+
+const moonLight = new THREE.DirectionalLight(13159352, 1.4);
+
+moonLight.position.set(-18, 34, -22);
+
+scene.add(moonLight);
+
+const fill = new THREE.HemisphereLight(6054480, 1843224, 1.05);
+
+scene.add(fill);
+
+const moonGroup = new THREE.Group;
+
+const moonBody = new THREE.Mesh(new THREE.SphereGeometry(6, 32, 32), new THREE.MeshBasicMaterial({
+  color: 15265004,
+  fog: false
+}));
+
+moonGroup.add(moonBody);
+
+const moonHalo = new THREE.Mesh(new THREE.SphereGeometry(9, 32, 32), new THREE.MeshBasicMaterial({
+  color: 13489880,
+  transparent: true,
+  opacity: .12,
+  fog: false,
+  depthWrite: false
+}));
+
+moonGroup.add(moonHalo);
+
+moonGroup.position.copy(moonLight.position).multiplyScalar(3.2);
+
+scene.add(moonGroup);
+
+const waterGeo = new THREE.PlaneGeometry(CONFIG.waterSize, CONFIG.waterSize, CONFIG.waterSegments, CONFIG.waterSegments);
+
+waterGeo.rotateX(-Math.PI / 2);
+
+const waterPos = waterGeo.attributes.position;
+
+const waterBase = new Float32Array(waterPos.count);
+
+for (let i = 0; i < waterPos.count; i++) waterBase[i] = waterPos.getY(i);
+
+const waterMat = new THREE.MeshStandardMaterial({
+  color: CONFIG.waterColor,
+  roughness: .25,
+  metalness: .15,
+  envMapIntensity: .6
+});
+
+const water = new THREE.Mesh(waterGeo, waterMat);
+
+water.position.y = -.02;
+
+scene.add(water);
+
+const plankBaseColor = new THREE.Color(5916208);
+
+const plankLength = CONFIG.plankDepth + CONFIG.plankGap;
+
+const plankCount = Math.ceil(CONFIG.pathLength / plankLength);
+
+const pathGroup = new THREE.Group;
+
+for (let i = 0; i < plankCount; i++) {
+  const shade = plankBaseColor.clone().offsetHSL(0, (Math.random() - .5) * .03, (Math.random() - .5) * .08);
+  const plankMat = new THREE.MeshStandardMaterial({
+    color: shade,
+    roughness: .95,
+    metalness: 0
+  });
+  const plank = new THREE.Mesh(new THREE.BoxGeometry(CONFIG.pathWidth, .06, CONFIG.plankDepth), plankMat);
+  plank.position.set((Math.random() - .5) * .03, CONFIG.pathY + (Math.random() - .5) * .01, -i * plankLength);
+  plank.rotation.y = (Math.random() - .5) * .02;
+  pathGroup.add(plank);
+}
+
+scene.add(pathGroup);
+
+const PARTICLE_COUNT = 100;
+
+const PARTICLE_CEILING = 6.5;
+
+const particleGeo = new THREE.BufferGeometry;
+
+const particlePositions = new Float32Array(PARTICLE_COUNT * 3);
+
+const particleSpeeds = new Float32Array(PARTICLE_COUNT);
+
+const particleSway = new Float32Array(PARTICLE_COUNT);
+
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  const radius = Math.random() * CONFIG.boundsRadius;
+  const angle = Math.random() * Math.PI * 2;
+  particlePositions[i * 3 + 0] = Math.cos(angle) * radius;
+  particlePositions[i * 3 + 1] = Math.random() * PARTICLE_CEILING;
+  particlePositions[i * 3 + 2] = Math.sin(angle) * radius - CONFIG.screenDistance * .5;
+  particleSpeeds[i] = .04 + Math.random() * .06;
+  particleSway[i] = Math.random() * Math.PI * 2;
+}
+
+particleGeo.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+
+const particleMat = new THREE.PointsMaterial({
+  color: 13489880,
+  size: .03,
+  transparent: true,
+  opacity: .14,
+  depthWrite: false,
+  sizeAttenuation: true
+});
+
+const particles = new THREE.Points(particleGeo, particleMat);
+
+scene.add(particles);
+
+const videoA = document.getElementById("video-a");
+
+const videoB = document.getElementById("video-b");
+
+const videos = [ videoA, videoB ];
+
+const texA = new THREE.VideoTexture(videoA);
+
+const texB = new THREE.VideoTexture(videoB);
+
+texA.colorSpace = THREE.SRGBColorSpace;
+
+texB.colorSpace = THREE.SRGBColorSpace;
+
+videos.forEach(v => {
+  v.addEventListener("loadeddata", () => {
+    if (v.currentTime === 0) v.currentTime = .01;
+  }, {
+    once: true
+  });
+});
+
+function makeGlowTexture(colorHex) {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const color = new THREE.Color(colorHex);
+  const r = Math.round(color.r * 255);
+  const g = Math.round(color.g * 255);
+  const b = Math.round(color.b * 255);
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.5)`);
+  gradient.addColorStop(.4, `rgba(${r}, ${g}, ${b}, 0.22)`);
+  gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeScreen(texture, videoEl, x, rotationY, glowColor, side) {
+  const group = new THREE.Group;
+  const glowTex = makeGlowTexture(glowColor);
+  const haloSize = Math.max(CONFIG.screenWidth, CONFIG.screenHeight) * 1.9;
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(haloSize, haloSize), new THREE.MeshBasicMaterial({
+    map: glowTex,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  }));
+  halo.position.z = -.04;
+  group.add(halo);
+  const backing = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.screenWidth, CONFIG.screenHeight), new THREE.MeshBasicMaterial({
+    color: 0
+  }));
+  backing.position.z = -.02;
+  group.add(backing);
+  const screenMat = new THREE.MeshBasicMaterial({
+    map: texture,
+    toneMapped: false
+  });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), screenMat);
+  screen.scale.set(CONFIG.screenWidth, CONFIG.screenHeight, 1);
+  group.add(screen);
+  function fitToFootage() {
+    if (!videoEl.videoWidth || !videoEl.videoHeight) return;
+    const frameAspect = CONFIG.screenWidth / CONFIG.screenHeight;
+    const footageAspect = videoEl.videoWidth / videoEl.videoHeight;
+    let w, h;
+    if (footageAspect > frameAspect) {
+      w = CONFIG.screenWidth;
+      h = w / footageAspect;
+    } else {
+      h = CONFIG.screenHeight;
+      w = h * footageAspect;
+    }
+    screen.scale.set(w, h, 1);
+    const leftoverX = CONFIG.screenWidth - w;
+    if (leftoverX > .001 && side) {
+      screen.position.x = side === "left" ? -leftoverX / 2 : leftoverX / 2;
+    } else {
+      screen.position.x = 0;
+    }
+  }
+  videoEl.addEventListener("loadedmetadata", fitToFootage);
+  if (videoEl.readyState >= 1) fitToFootage();
+  const light = new THREE.PointLight(glowColor, 4, 16, 1.5);
+  light.position.set(0, 0, 1.5);
+  group.add(light);
+  group.position.set(x, CONFIG.screenHeightAbove, -CONFIG.screenDistance);
+  group.rotation.y = rotationY;
+  scene.add(group);
+  return group;
+}
+
+const screenA = makeScreen(texA, videoA, -CONFIG.screenSpread / 2, CONFIG.screenAngle, 4876914, "left");
+
+const screenB = makeScreen(texB, videoB, CONFIG.screenSpread / 2, -CONFIG.screenAngle, 6968648, "right");
+
+const controls = new PointerLockControls(camera, renderer.domElement);
+
+const intro = document.getElementById("intro");
+
+const hud = document.getElementById("hud");
+
+const crosshair = document.getElementById("crosshair");
+
+const playPrompt = document.getElementById("play-prompt");
+
+const homeHint = document.getElementById("home-hint");
+
+let entered = false;
+
+let playing = false;
+
+intro.addEventListener("click", () => {
+  controls.lock();
+});
+
+document.querySelector(".credits-link").addEventListener("click", e => {
+  e.stopPropagation();
+});
+
+controls.addEventListener("lock", () => {
+  intro.classList.add("hidden");
+  hud.classList.add("visible");
+  crosshair.classList.add("visible");
+  homeHint.classList.add("visible");
+  entered = true;
+  if (!playing) {
+    playPrompt.classList.add("visible");
+  }
+});
+
+controls.addEventListener("unlock", () => {
+  intro.classList.remove("hidden");
+  hud.classList.remove("visible");
+  crosshair.classList.remove("visible");
+  playPrompt.classList.remove("visible");
+  homeHint.classList.remove("visible");
+});
+
+function waitUntilReady(video) {
+  return new Promise(resolve => {
+    if (video.readyState >= 3) resolve(); else video.addEventListener("canplay", () => resolve(), {
+      once: true
+    });
+  });
+}
+
+async function playBoth() {
+  playing = true;
+  playPrompt.classList.add("fading");
+  setTimeout(() => playPrompt.classList.remove("visible"), 800);
+  videos.forEach(v => {
+    v.currentTime = 0;
+  });
+  await Promise.all(videos.map(waitUntilReady));
+  videos.forEach(v => {
+    v.muted = false;
+  });
+  await Promise.all(videos.map(v => v.play().catch(() => {})));
+  hud.textContent = "playing — click to stop, esc to release the view";
+}
+
+function pauseBoth() {
+  videos.forEach(v => v.pause());
+  hud.textContent = "stopped — click to play again, esc to release the view";
+}
+
+function toggleBoth() {
+  if (!playing) {
+    playBoth();
+  } else if (videoA.paused) {
+    videos.forEach(v => v.play().catch(() => {}));
+    hud.textContent = "playing — click to stop, esc to release the view";
+  } else {
+    pauseBoth();
+  }
+}
+
+renderer.domElement.addEventListener("mousedown", () => {
+  if (entered) toggleBoth();
+});
+
+const move = {
+  forward: false,
+  back: false,
+  left: false,
+  right: false
+};
+
+window.addEventListener("keydown", e => {
+  switch (e.code) {
+   case "KeyW":
+   case "ArrowUp":
+    move.forward = true;
+    break;
+
+   case "KeyS":
+   case "ArrowDown":
+    move.back = true;
+    break;
+
+   case "KeyA":
+   case "ArrowLeft":
+    move.left = true;
+    break;
+
+   case "KeyD":
+   case "ArrowRight":
+    move.right = true;
+    break;
+  }
+});
+
+window.addEventListener("keyup", e => {
+  switch (e.code) {
+   case "KeyW":
+   case "ArrowUp":
+    move.forward = false;
+    break;
+
+   case "KeyS":
+   case "ArrowDown":
+    move.back = false;
+    break;
+
+   case "KeyA":
+   case "ArrowLeft":
+    move.left = false;
+    break;
+
+   case "KeyD":
+   case "ArrowRight":
+    move.right = false;
+    break;
+  }
+});
+
+const clock = new THREE.Clock;
+
+function updateMovement(dt) {
+  const dir = new THREE.Vector3(Number(move.right) - Number(move.left), 0, Number(move.back) - Number(move.forward));
+  if (dir.lengthSq() > 0) dir.normalize();
+  controls.moveRight(dir.x * CONFIG.walkSpeed * dt);
+  controls.moveForward(-dir.z * CONFIG.walkSpeed * dt);
+  const p = controls.getObject().position;
+  const dist = Math.hypot(p.x, p.z);
+  if (dist > CONFIG.boundsRadius) {
+    const scale = CONFIG.boundsRadius / dist;
+    p.x *= scale;
+    p.z *= scale;
+  }
+  p.y = CONFIG.eyeHeight;
+}
+
+const START_POSITION = new THREE.Vector3(0, CONFIG.eyeHeight, 2.5);
+
+function returnHome() {
+  videos.forEach(v => {
+    v.pause();
+    v.currentTime = 0;
+    v.muted = true;
+  });
+  playing = false;
+  entered = false;
+  hud.textContent = "walking — esc to release the view";
+  camera.position.copy(START_POSITION);
+  camera.rotation.set(0, 0, 0);
+  if (document.exitPointerLock) document.exitPointerLock();
+  controls.unlock();
+}
+
+window.addEventListener("keydown", e => {
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (entered) toggleBoth();
+  }
+  if (e.key === "r" || e.key === "R") {
+    if (!playing) return;
+    videos.forEach(v => {
+      v.currentTime = 0;
+    });
+    videos.forEach(v => v.play().catch(() => {}));
+    hud.textContent = "playing — click to stop, esc to release the view";
+  }
+  if (e.key === "h" || e.key === "H") {
+    if (entered) returnHome();
+  }
+});
+
+function animateWater(t) {
+  for (let i = 0; i < waterPos.count; i++) {
+    const x = waterPos.getX(i);
+    const z = waterPos.getZ(i);
+    const y = waterBase[i] + Math.sin(x * .35 + t * CONFIG.waveSpeed) * CONFIG.waveHeight + Math.cos(z * .28 + t * CONFIG.waveSpeed * .8) * CONFIG.waveHeight;
+    waterPos.setY(i, y);
+  }
+  waterPos.needsUpdate = true;
+  waterGeo.computeVertexNormals();
+}
+
+function animateParticles(t, dt) {
+  const pos = particleGeo.attributes.position;
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    let y = pos.getY(i) + particleSpeeds[i] * dt;
+    if (y > PARTICLE_CEILING) y = 0;
+    pos.setY(i, y);
+    const baseX = particlePositions[i * 3 + 0];
+    const baseZ = particlePositions[i * 3 + 2];
+    const sway = Math.sin(t * .15 + particleSway[i]) * .15;
+    pos.setX(i, baseX + sway);
+    pos.setZ(i, baseZ + sway * .6);
+  }
+  pos.needsUpdate = true;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), .1);
+  const t = clock.elapsedTime;
+  animateWater(t);
+  animateParticles(t, dt);
+  if (controls.isLocked) {
+    updateMovement(dt);
+  }
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+
+</body>
+</html>
