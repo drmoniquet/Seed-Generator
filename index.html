@@ -349,16 +349,6 @@ moonBody.scale.set(12, 12, 1);
 
 moonGroup.add(moonBody);
 
-const moonHalo = new THREE.Mesh(new THREE.SphereGeometry(9, 32, 32), new THREE.MeshBasicMaterial({
-  color: 13489880,
-  transparent: true,
-  opacity: .12,
-  fog: false,
-  depthWrite: false
-}));
-
-moonGroup.add(moonHalo);
-
 moonGroup.position.copy(moonLight.position).multiplyScalar(3.2);
 
 scene.add(moonGroup);
@@ -367,24 +357,149 @@ const waterGeo = new THREE.PlaneGeometry(CONFIG.waterSize, CONFIG.waterSize, CON
 
 waterGeo.rotateX(-Math.PI / 2);
 
-const waterPos = waterGeo.attributes.position;
+function makeEnvFaceCanvas(kind) {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (kind === "top") {
+    ctx.fillStyle = "#0a1016";
+    ctx.fillRect(0, 0, size, size);
+  } else if (kind === "bottom") {
+    ctx.fillStyle = "#030405";
+    ctx.fillRect(0, 0, size, size);
+  } else {
+    const grad = ctx.createLinearGradient(0, 0, 0, size);
+    grad.addColorStop(0, "#0a1016");
+    grad.addColorStop(.72, "#141d24");
+    grad.addColorStop(1, "#2a3a42");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+  }
+  return canvas;
+}
 
-const waterBase = new Float32Array(waterPos.count);
+const envCube = new THREE.CubeTexture([ makeEnvFaceCanvas("side"), makeEnvFaceCanvas("side"), makeEnvFaceCanvas("top"), makeEnvFaceCanvas("bottom"), makeEnvFaceCanvas("side"), makeEnvFaceCanvas("side") ]);
 
-for (let i = 0; i < waterPos.count; i++) waterBase[i] = waterPos.getY(i);
+envCube.needsUpdate = true;
+
+envCube.colorSpace = THREE.SRGBColorSpace;
 
 const waterMat = new THREE.MeshStandardMaterial({
   color: CONFIG.waterColor,
-  roughness: .25,
-  metalness: .15,
-  envMapIntensity: .6
+  roughness: .18,
+  metalness: .25,
+  envMap: envCube,
+  envMapIntensity: .9
 });
+
+let waterShaderRef = null;
+
+waterMat.onBeforeCompile = shader => {
+  shader.uniforms.uTime = {
+    value: 0
+  };
+  shader.vertexShader = shader.vertexShader.replace("#include <common>", `#include <common>\n      uniform float uTime;\n      varying vec3 vWaterWorldPos;\n\n      float waveHeight(vec2 p, float t) {\n        float h = 0.0;\n        h += sin(p.x * 0.35 + t * 0.35) * 0.06;\n        h += cos(p.y * 0.28 + t * 0.28) * 0.06;\n        h += sin((p.x * 0.9 + p.y * 0.6) + t * 0.6) * 0.028;\n        h += cos((p.x * 0.5 - p.y * 0.8) + t * 0.45) * 0.022;\n        h += sin((p.x * 1.7 - p.y * 1.3) + t * 1.1) * 0.01;\n        return h;\n      }`).replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>\n      {\n        float eps = 0.15;\n        float hL = waveHeight(position.xz - vec2(eps, 0.0), uTime);\n        float hR = waveHeight(position.xz + vec2(eps, 0.0), uTime);\n        float hD = waveHeight(position.xz - vec2(0.0, eps), uTime);\n        float hU = waveHeight(position.xz + vec2(0.0, eps), uTime);\n        objectNormal = normalize(vec3((hL - hR) / (2.0 * eps), 1.0, (hD - hU) / (2.0 * eps)));\n      }`).replace("#include <begin_vertex>", `#include <begin_vertex>\n      transformed.y += waveHeight(position.xz, uTime);\n      vWaterWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+  shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `#include <common>\n      varying vec3 vWaterWorldPos;`).replace("#include <dithering_fragment>", `{\n        float dist = length(cameraPosition - vWaterWorldPos);\n        float horizonMix = smoothstep(9.0, 22.0, dist);\n        vec3 horizonColor = vec3(0.027, 0.031, 0.039);\n        gl_FragColor.rgb = mix(gl_FragColor.rgb, horizonColor, horizonMix);\n      }\n      #include <dithering_fragment>`);
+  waterShaderRef = shader;
+};
 
 const water = new THREE.Mesh(waterGeo, waterMat);
 
 water.position.y = -.02;
 
 scene.add(water);
+
+function makeGlintTexture() {
+  const w = 64, h = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  const grad = ctx.createLinearGradient(0, 0, w, 0);
+  grad.addColorStop(0, "rgba(205,214,216,0)");
+  grad.addColorStop(.5, "rgba(205,214,216,0.9)");
+  grad.addColorStop(1, "rgba(205,214,216,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const glintDir = new THREE.Vector2(moonLight.position.x, moonLight.position.z).normalize();
+
+const glintAngle = Math.atan2(glintDir.x, glintDir.y);
+
+const glintLength = 90;
+
+const glint = new THREE.Mesh(new THREE.PlaneGeometry(4.5, glintLength), new THREE.MeshBasicMaterial({
+  map: makeGlintTexture(),
+  transparent: true,
+  opacity: .22,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  fog: false
+}));
+
+glint.rotation.x = -Math.PI / 2;
+
+glint.rotation.z = -glintAngle;
+
+glint.position.set(glintDir.x * (glintLength / 2 - 8), -.015, glintDir.y * (glintLength / 2 - 8));
+
+scene.add(glint);
+
+function makeMistTexture() {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, size, size);
+  const blobCount = 14;
+  for (let i = 0; i < blobCount; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const r = size * (.18 + Math.random() * .22);
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, "rgba(230,235,232,0.5)");
+    grad.addColorStop(1, "rgba(230,235,232,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 4);
+  return tex;
+}
+
+const mistLayers = [];
+
+const mistHeights = [ .08, .22, .38 ];
+
+for (let i = 0; i < mistHeights.length; i++) {
+  const tex = makeMistTexture();
+  const mist = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.waterSize * .9, CONFIG.waterSize * .9), new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    opacity: .09,
+    depthWrite: false,
+    fog: false
+  }));
+  mist.rotation.x = -Math.PI / 2;
+  mist.position.y = mistHeights[i];
+  scene.add(mist);
+  mistLayers.push({
+    mesh: mist,
+    tex: tex,
+    speed: .004 + i * .002
+  });
+}
 
 function makeWoodGrainTexture(baseHex, seed) {
   const w = 512, h = 128;
@@ -806,17 +921,6 @@ window.addEventListener("keydown", e => {
   }
 });
 
-function animateWater(t) {
-  for (let i = 0; i < waterPos.count; i++) {
-    const x = waterPos.getX(i);
-    const z = waterPos.getZ(i);
-    const y = waterBase[i] + Math.sin(x * .35 + t * CONFIG.waveSpeed) * CONFIG.waveHeight + Math.cos(z * .28 + t * CONFIG.waveSpeed * .8) * CONFIG.waveHeight;
-    waterPos.setY(i, y);
-  }
-  waterPos.needsUpdate = true;
-  waterGeo.computeVertexNormals();
-}
-
 function animateParticles(t, dt) {
   const pos = particleGeo.attributes.position;
   for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -836,7 +940,14 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), .1);
   const t = clock.elapsedTime;
-  animateWater(t);
+  if (waterShaderRef) {
+    waterShaderRef.uniforms.uTime.value = t;
+  }
+  glint.material.opacity = .16 + Math.sin(t * .5) * .04 + Math.sin(t * 1.7) * .02;
+  mistLayers.forEach((layer, i) => {
+    layer.tex.offset.x = t * layer.speed;
+    layer.tex.offset.y = t * layer.speed * .6 * (i % 2 === 0 ? 1 : -1);
+  });
   animateParticles(t, dt);
   if (controls.isLocked) {
     updateMovement(dt);
