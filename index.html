@@ -209,16 +209,12 @@ import { PointerLockControls } from "three/addons/controls/PointerLockControls.j
 const CONFIG = {
   fogColor: 460810,
   fogDensity: .032,
-  waterColor: 857362,
-  waterSize: 200,
-  waterSegments: 140,
-  waveHeight: .06,
-  waveSpeed: .35,
+  groundSize: 200,
   pathLength: 9,
   pathWidth: 1.4,
   plankDepth: .5,
   plankGap: .06,
-  pathY: .02,
+  pathY: .16,
   screenWidth: 10.8,
   screenHeight: 4.05,
   screenDistance: 8,
@@ -227,7 +223,7 @@ const CONFIG = {
   screenAngle: Math.PI / 7.5,
   eyeHeight: 1.65,
   walkSpeed: 3.4,
-  boundsRadius: 18
+  boundsRadius: 9
 };
 
 const scene = new THREE.Scene;
@@ -353,188 +349,31 @@ moonGroup.position.copy(moonLight.position).multiplyScalar(3.2);
 
 scene.add(moonGroup);
 
-const waterGeo = new THREE.PlaneGeometry(CONFIG.waterSize, CONFIG.waterSize, CONFIG.waterSegments, CONFIG.waterSegments);
+const groundTexture = (new THREE.TextureLoader).load("images/grass-tile.jpg");
 
-waterGeo.rotateX(-Math.PI / 2);
+groundTexture.colorSpace = THREE.SRGBColorSpace;
 
-function makePebbleTexture() {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#26282b";
-  ctx.fillRect(0, 0, size, size);
-  const stoneCount = 260;
-  for (let i = 0; i < stoneCount; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const rw = 4 + Math.random() * 9;
-    const rh = rw * (.7 + Math.random() * .3);
-    const angle = Math.random() * Math.PI;
-    const accent = Math.random();
-    let r, g, b;
-    if (accent > .92) {
-      r = 150 + Math.random() * 40;
-      g = 100 + Math.random() * 30;
-      b = 80 + Math.random() * 20;
-    } else if (accent > .85) {
-      r = 190 + Math.random() * 30;
-      g = 185 + Math.random() * 25;
-      b = 170 + Math.random() * 25;
-    } else {
-      const grey = 55 + Math.random() * 55;
-      r = grey;
-      g = grey * 1.02;
-      b = grey * 1.08;
-    }
-    const grad = ctx.createRadialGradient(x - rw * .25, y - rh * .25, 0, x, y, Math.max(rw, rh));
-    grad.addColorStop(0, `rgb(${Math.min(255, r + 35)}, ${Math.min(255, g + 35)}, ${Math.min(255, b + 35)})`);
-    grad.addColorStop(.6, `rgb(${r}, ${g}, ${b})`);
-    grad.addColorStop(1, `rgb(${r * .55}, ${g * .55}, ${b * .55})`);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, rw, rh, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
-}
+groundTexture.wrapS = THREE.RepeatWrapping;
 
-const pebbleTexture = makePebbleTexture();
+groundTexture.wrapT = THREE.RepeatWrapping;
 
-pebbleTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+groundTexture.repeat.set(28, 28);
 
-function makeGrassTexture() {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#334228";
-  ctx.fillRect(0, 0, size, size);
-  const bladeCount = 2400;
-  for (let i = 0; i < bladeCount; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const len = 10 + Math.random() * 22;
-    const angle = (Math.random() - .5) * 1.1 - Math.PI / 2;
-    const warmth = Math.random();
-    const g = Math.round(90 + warmth * 65 + Math.random() * 30);
-    const r = Math.round(g * (.4 + warmth * .25));
-    const b = Math.round(g * .3);
-    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${.55 + Math.random() * .4})`;
-    ctx.lineWidth = 1.1 + Math.random() * 1.6;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    const midX = x + Math.cos(angle) * len * .5 + (Math.random() - .5) * 3;
-    const midY = y + Math.sin(angle) * len * .5;
-    const endX = x + Math.cos(angle) * len;
-    const endY = y + Math.sin(angle) * len;
-    ctx.quadraticCurveTo(midX, midY, endX, endY);
-    ctx.stroke();
-  }
-  const flowerCount = 22;
-  for (let i = 0; i < flowerCount; i++) {
-    const cx = Math.random() * size;
-    const cy = Math.random() * size;
-    const petalCount = 3 + Math.floor(Math.random() * 3);
-    const hue = 250 + Math.random() * 20;
-    for (let p = 0; p < petalCount; p++) {
-      const px = cx + (Math.random() - .5) * 6;
-      const py = cy + (Math.random() - .5) * 6 - p * 1.5;
-      ctx.fillStyle = `hsla(${hue}, 40%, ${45 + Math.random() * 15}%, ${.5 + Math.random() * .3})`;
-      ctx.beginPath();
-      ctx.arc(px, py, 1 + Math.random() * 1.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
-}
+groundTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
-const grassTexture = makeGrassTexture();
-
-grassTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-
-const waterMat = new THREE.MeshStandardMaterial({
-  color: CONFIG.waterColor,
-  roughness: .4,
-  metalness: .02
+const groundMat = new THREE.MeshStandardMaterial({
+  map: groundTexture,
+  roughness: .95,
+  metalness: 0
 });
 
-let waterShaderRef = null;
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.groundSize, CONFIG.groundSize), groundMat);
 
-waterMat.onBeforeCompile = shader => {
-  shader.uniforms.uTime = {
-    value: 0
-  };
-  shader.uniforms.uPebbleMap = {
-    value: pebbleTexture
-  };
-  shader.uniforms.uGrassMap = {
-    value: grassTexture
-  };
-  shader.vertexShader = shader.vertexShader.replace("#include <common>", `#include <common>\n      uniform float uTime;\n      varying vec3 vWaterWorldPos;\n      varying float vPebbleMix;\n      varying float vGrassMix;\n\n      float waveHeight(vec2 p, float t) {\n        float h = 0.0;\n        h += sin(p.x * 0.35 + t * 0.35) * 0.06;\n        h += cos(p.y * 0.28 + t * 0.28) * 0.06;\n        h += sin((p.x * 0.9 + p.y * 0.6) + t * 0.6) * 0.028;\n        h += cos((p.x * 0.5 - p.y * 0.8) + t * 0.45) * 0.022;\n        h += sin((p.x * 1.7 - p.y * 1.3) + t * 1.1) * 0.01;\n        return h;\n      }`).replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>\n      {\n        float eps = 0.15;\n        float shoreFade = 1.0 - smoothstep(9.0, 17.0, length(position.xz));\n        float hL = waveHeight(position.xz - vec2(eps, 0.0), uTime) * shoreFade;\n        float hR = waveHeight(position.xz + vec2(eps, 0.0), uTime) * shoreFade;\n        float hD = waveHeight(position.xz - vec2(0.0, eps), uTime) * shoreFade;\n        float hU = waveHeight(position.xz + vec2(0.0, eps), uTime) * shoreFade;\n        objectNormal = normalize(vec3((hL - hR) / (2.0 * eps), 1.0, (hD - hU) / (2.0 * eps)));\n      }`).replace("#include <begin_vertex>", `#include <begin_vertex>\n      float distFromCenter = length(position.xz);\n      float shoreFade = 1.0 - smoothstep(9.0, 17.0, distFromCenter);\n      transformed.y += waveHeight(position.xz, uTime) * shoreFade;\n      vWaterWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\n      vPebbleMix = smoothstep(8.0, 15.0, distFromCenter);\n      vGrassMix = smoothstep(19.0, 29.0, distFromCenter);`);
-  shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `#include <common>\n      uniform sampler2D uPebbleMap;\n      uniform sampler2D uGrassMap;\n      varying vec3 vWaterWorldPos;\n      varying float vPebbleMix;\n      varying float vGrassMix;`).replace("#include <dithering_fragment>", `{\n        vec2 groundUV = vWaterWorldPos.xz * 0.12;\n        vec3 pebbleColor = texture2D(uPebbleMap, groundUV * 1.6).rgb;\n        vec3 grassColor = texture2D(uGrassMap, groundUV).rgb;\n\n        gl_FragColor.rgb = mix(gl_FragColor.rgb, pebbleColor, vPebbleMix);\n        gl_FragColor.rgb = mix(gl_FragColor.rgb, grassColor, vGrassMix);\n\n        float farDist = length(vWaterWorldPos.xz);\n        float farMix = smoothstep(55.0, 95.0, farDist);\n        vec3 farColor = vec3(0.027, 0.031, 0.039);\n        gl_FragColor.rgb = mix(gl_FragColor.rgb, farColor, farMix);\n      }\n      #include <dithering_fragment>`);
-  waterShaderRef = shader;
-};
+ground.rotation.x = -Math.PI / 2;
 
-const water = new THREE.Mesh(waterGeo, waterMat);
+ground.position.y = 0;
 
-water.position.y = -.02;
-
-scene.add(water);
-
-function makeGlintTexture() {
-  const w = 64, h = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  const grad = ctx.createLinearGradient(0, 0, w, 0);
-  grad.addColorStop(0, "rgba(205,214,216,0)");
-  grad.addColorStop(.5, "rgba(205,214,216,0.9)");
-  grad.addColorStop(1, "rgba(205,214,216,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
-
-const glintDir = new THREE.Vector2(moonLight.position.x, moonLight.position.z).normalize();
-
-const glintAngle = Math.atan2(glintDir.x, glintDir.y);
-
-const glintLength = 90;
-
-const glint = new THREE.Mesh(new THREE.PlaneGeometry(4.5, glintLength), new THREE.MeshBasicMaterial({
-  map: makeGlintTexture(),
-  transparent: true,
-  opacity: .22,
-  blending: THREE.AdditiveBlending,
-  depthWrite: false,
-  fog: false
-}));
-
-glint.rotation.x = -Math.PI / 2;
-
-glint.rotation.z = -glintAngle;
-
-glint.position.set(glintDir.x * (glintLength / 2 - 8), -.015, glintDir.y * (glintLength / 2 - 8));
-
-scene.add(glint);
+scene.add(ground);
 
 function makeDirtTexture() {
   const size = 256;
@@ -973,10 +812,6 @@ function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), .1);
   const t = clock.elapsedTime;
-  if (waterShaderRef) {
-    waterShaderRef.uniforms.uTime.value = t;
-  }
-  glint.material.opacity = .16 + Math.sin(t * .5) * .04 + Math.sin(t * 1.7) * .02;
   animateParticles(t, dt);
   if (controls.isLocked) {
     updateMovement(dt);
