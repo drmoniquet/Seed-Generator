@@ -536,56 +536,6 @@ glint.position.set(glintDir.x * (glintLength / 2 - 8), -.015, glintDir.y * (glin
 
 scene.add(glint);
 
-function makeMistTexture() {
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, size, size);
-  const blobCount = 14;
-  for (let i = 0; i < blobCount; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const r = size * (.18 + Math.random() * .22);
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0, "rgba(230,235,232,0.5)");
-    grad.addColorStop(1, "rgba(230,235,232,0)");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(4, 4);
-  return tex;
-}
-
-const mistLayers = [];
-
-const mistHeights = [ .08, .22, .38 ];
-
-for (let i = 0; i < mistHeights.length; i++) {
-  const tex = makeMistTexture();
-  const mist = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.waterSize * .9, CONFIG.waterSize * .9), new THREE.MeshBasicMaterial({
-    map: tex,
-    transparent: true,
-    opacity: .09,
-    depthWrite: false,
-    fog: false
-  }));
-  mist.rotation.x = -Math.PI / 2;
-  mist.position.y = mistHeights[i];
-  scene.add(mist);
-  mistLayers.push({
-    mesh: mist,
-    tex: tex,
-    speed: .004 + i * .002
-  });
-}
-
 function makeDirtTexture() {
   const size = 256;
   const canvas = document.createElement("canvas");
@@ -1027,10 +977,6 @@ function animate() {
     waterShaderRef.uniforms.uTime.value = t;
   }
   glint.material.opacity = .16 + Math.sin(t * .5) * .04 + Math.sin(t * 1.7) * .02;
-  mistLayers.forEach((layer, i) => {
-    layer.tex.offset.x = t * layer.speed;
-    layer.tex.offset.y = t * layer.speed * .6 * (i % 2 === 0 ? 1 : -1);
-  });
   animateParticles(t, dt);
   if (controls.isLocked) {
     updateMovement(dt);
