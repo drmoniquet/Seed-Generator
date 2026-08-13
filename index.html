@@ -212,9 +212,6 @@ const CONFIG = {
   groundSize: 200,
   pathLength: 9,
   pathWidth: 1.4,
-  plankDepth: .5,
-  plankGap: .06,
-  pathY: .16,
   screenWidth: 10.8,
   screenHeight: 4.05,
   screenDistance: 8,
@@ -349,32 +346,6 @@ moonGroup.position.copy(moonLight.position).multiplyScalar(3.2);
 
 scene.add(moonGroup);
 
-const groundTexture = (new THREE.TextureLoader).load("images/grass-tile.jpg");
-
-groundTexture.colorSpace = THREE.SRGBColorSpace;
-
-groundTexture.wrapS = THREE.RepeatWrapping;
-
-groundTexture.wrapT = THREE.RepeatWrapping;
-
-groundTexture.repeat.set(28, 28);
-
-groundTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-
-const groundMat = new THREE.MeshStandardMaterial({
-  map: groundTexture,
-  roughness: .95,
-  metalness: 0
-});
-
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.groundSize, CONFIG.groundSize), groundMat);
-
-ground.rotation.x = -Math.PI / 2;
-
-ground.position.y = 0;
-
-scene.add(ground);
-
 function makeDirtTexture() {
   const size = 256;
   const canvas = document.createElement("canvas");
@@ -421,45 +392,56 @@ function makeDirtTexture() {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(1, 4);
   return tex;
 }
 
-const dirtSegments = 24;
+const groundTexture = (new THREE.TextureLoader).load("images/grass-tile.jpg");
 
-const dirtGeo = new THREE.PlaneGeometry(CONFIG.pathWidth * 1.4, CONFIG.pathLength, 6, dirtSegments);
+groundTexture.colorSpace = THREE.SRGBColorSpace;
 
-dirtGeo.rotateX(-Math.PI / 2);
+groundTexture.wrapS = THREE.RepeatWrapping;
 
-const dirtPos = dirtGeo.attributes.position;
+groundTexture.wrapT = THREE.RepeatWrapping;
 
-for (let i = 0; i < dirtPos.count; i++) {
-  const x = dirtPos.getX(i);
-  const z = dirtPos.getZ(i);
-  const edgeFactor = Math.abs(x) / (CONFIG.pathWidth * .7);
-  if (edgeFactor > .55) {
-    const wobble = Math.sin(z * .35) * .15 + Math.sin(z * .9 + 1.5) * .08;
-    dirtPos.setX(i, x + wobble * edgeFactor * Math.sign(x || 1));
-  }
-}
+groundTexture.repeat.set(28, 28);
 
-dirtGeo.computeVertexNormals();
+groundTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
 const dirtTexture = makeDirtTexture();
 
+dirtTexture.wrapS = THREE.RepeatWrapping;
+
+dirtTexture.wrapT = THREE.RepeatWrapping;
+
 dirtTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
-const dirtMat = new THREE.MeshStandardMaterial({
-  map: dirtTexture,
-  roughness: .98,
+const groundMat = new THREE.MeshStandardMaterial({
+  map: groundTexture,
+  roughness: .95,
   metalness: 0
 });
 
-const dirtPath = new THREE.Mesh(dirtGeo, dirtMat);
+groundMat.onBeforeCompile = shader => {
+  shader.uniforms.uDirtMap = {
+    value: dirtTexture
+  };
+  shader.uniforms.uPathLength = {
+    value: CONFIG.pathLength
+  };
+  shader.uniforms.uPathWidth = {
+    value: CONFIG.pathWidth
+  };
+  shader.vertexShader = shader.vertexShader.replace("#include <common>", `#include <common>\n      varying vec3 vGroundWorldPos;`).replace("#include <begin_vertex>", `#include <begin_vertex>\n      vGroundWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+  shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `#include <common>\n      uniform sampler2D uDirtMap;\n      uniform float uPathLength;\n      uniform float uPathWidth;\n      varying vec3 vGroundWorldPos;\n\n      // cheap organic 2D noise — no texture needed, just layered sines\n      float groundNoise(vec2 p) {\n        return sin(p.x * 1.3 + sin(p.y * 0.7) * 2.0) * sin(p.y * 1.1 + sin(p.x * 0.5) * 1.5);\n      }`).replace("#include <dithering_fragment>", `{\n        vec3 wp = vGroundWorldPos;\n\n        // lateral distance from the trail's centerline, with an organic,\n        // irregular edge rather than a straight-sided lane\n        float lateral = abs(wp.x);\n        float edgeWobble = groundNoise(wp.xz * 0.55) * 0.5 + groundNoise(wp.xz * 1.6) * 0.18;\n        float edge = uPathWidth * 0.55 + edgeWobble;\n        float dirtMask = 1.0 - smoothstep(edge - 0.35, edge + 0.55, lateral);\n\n        // fades in near the entrance, fades out again before the screens,\n        // so the trail feels like it emerges from and returns to the grass\n        float startFade = smoothstep(2.2, 0.2, wp.z);\n        float endFade = 1.0 - smoothstep(-(uPathLength - 1.5), -(uPathLength + 2.0), wp.z);\n        dirtMask *= startFade * endFade;\n        dirtMask = clamp(dirtMask, 0.0, 1.0);\n\n        vec3 dirtColor = texture2D(uDirtMap, wp.xz * 0.55).rgb;\n        gl_FragColor.rgb = mix(gl_FragColor.rgb, dirtColor, dirtMask);\n      }\n      #include <dithering_fragment>`);
+};
 
-dirtPath.position.set(0, CONFIG.pathY, -CONFIG.pathLength / 2);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(CONFIG.groundSize, CONFIG.groundSize, 1, 1), groundMat);
 
-scene.add(dirtPath);
+ground.rotation.x = -Math.PI / 2;
+
+ground.position.y = 0;
+
+scene.add(ground);
 
 const PARTICLE_COUNT = 100;
 
