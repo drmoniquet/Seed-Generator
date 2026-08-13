@@ -314,15 +314,15 @@ function makeStarfield() {
 
 scene.add(makeStarfield());
 
-scene.add(new THREE.AmbientLight(4871496, 2.3));
+scene.add(new THREE.AmbientLight(3029570, .85));
 
-const moonLight = new THREE.DirectionalLight(13159352, 1.4);
+const moonLight = new THREE.DirectionalLight(11451074, .55);
 
 moonLight.position.set(-18, 34, -22);
 
 scene.add(moonLight);
 
-const fill = new THREE.HemisphereLight(6054480, 1843224, 1.05);
+const fill = new THREE.HemisphereLight(3358534, 988176, .45);
 
 scene.add(fill);
 
@@ -417,6 +417,7 @@ dirtTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
 const groundMat = new THREE.MeshStandardMaterial({
   map: groundTexture,
+  color: 7042688,
   roughness: .95,
   metalness: 0
 });
