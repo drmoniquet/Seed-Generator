@@ -624,6 +624,9 @@ controls.addEventListener("unlock", () => {
   crosshair.classList.remove("visible");
   playPrompt.classList.remove("visible");
   homeHint.classList.remove("visible");
+  if (playing && !videoA.paused) {
+    pauseBoth();
+  }
 });
 
 function waitUntilReady(video) {
