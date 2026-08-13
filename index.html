@@ -395,7 +395,7 @@ function makeDirtTexture() {
   return tex;
 }
 
-const groundTexture = (new THREE.TextureLoader).load("images/moss-tile.jpg");
+const groundTexture = (new THREE.TextureLoader).load("images/grass-tile.jpg");
 
 groundTexture.colorSpace = THREE.SRGBColorSpace;
 
@@ -403,7 +403,7 @@ groundTexture.wrapS = THREE.RepeatWrapping;
 
 groundTexture.wrapT = THREE.RepeatWrapping;
 
-groundTexture.repeat.set(40, 40);
+groundTexture.repeat.set(28, 28);
 
 groundTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
